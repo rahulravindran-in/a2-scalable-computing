@@ -1,0 +1,48 @@
+version: "3"
+services: # docker stack deploy -c docker-redis-stack.yml drs
+  web:
+    image: urlshortener
+    build: .
+    ports:
+      - "8080:8080"
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  redis-master:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.hostname == node_142_1_46_74_a
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    volumes:
+        - ./redis-volume:/data
+
+  redis-read-replicas:
+    image: redis:alpine
+    ports:
+      - "6380:6379"
+    deploy:
+      mode: replicated
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+      placement:
+        # max_replicas_per_node: 1
+        constraints:
+          - node.hostname != node_142_1_46_74_a
+    environment:
+      - REDIS_MASTER_HOST=10.11.1.74
+      - REDIS_REPLICATION_MODE=slave
+    volumes:
+        - /home/student/rav/redis-read-volume:/data
